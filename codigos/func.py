@@ -22,6 +22,14 @@ def standardization (x) :
         z.append((i - m) / dev)  
     return z
 
+def fit_standardization (x):
+    m = mean(x)
+    d = std_deviation(x, m)
+    return m, d
+
+def apply_standardization (x, m, d):
+    return [(i - m) / d for i in x]
+
 def centred (x, mean):
     centred_x = []
     for i in x:
