@@ -14,23 +14,19 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, c
 
 if __name__ == "__main__":
 
-    df = pd.read_csv('spotify.csv', encoding='latin-1')
+    df = pd.read_csv('gym.csv')
 
-    # limpeza
-    for c in ['in_deezer_playlists', 'in_shazam_charts']:
-        df[c] = pd.to_numeric(df[c].astype(str).str.replace(',', ''), errors='coerce')
-
-    df['streams'] = pd.to_numeric(df['streams'], errors='coerce')
-    df = df.dropna(subset=['streams']).reset_index(drop=True)
 
     # separar campos de entrada
-    colunas_features = ['artist_count', 'released_year', 'released_month', 'released_day', 'in_spotify_playlists', 'in_spotify_charts', 'in_apple_playlists', 'in_apple_charts', 'in_deezer_playlists', 'in_deezer_charts', 'in_shazam_charts', 'bpm', 'danceability_%', 'valence_%', 'energy_%', 'acousticness_%', 'instrumentalness_%', 'liveness_%', 'speechiness_%']
-    one_hot = pd.get_dummies(df[['key', 'mode']], dtype=float, dummy_na=True)
+    colunas_features = ['Age', 'Weight (kg)', 'Height (m)', 'Max_BPM', 'Avg_BPM', 'Resting_BPM',
+    'Session_Duration (hours)', 'Fat_Percentage', 'Water_Intake (liters)',
+    'Workout_Frequency (days/week)', 'Experience_Level', 'BMI']
+    one_hot = pd.get_dummies(df[['Gender', 'Workout_Type']], dtype=float, dummy_na=True)
     X_temp = pd.concat ([df[colunas_features], one_hot], axis=1)
     X = X_temp.values
 
     # separar campo alvo
-    Y = df['streams'].values.astype(float)
+    Y = df['Calories_Burned'].values.astype(float)
 
     # divisao dos dados (60% - treino, 20% - validação e 20% - teste)
     X_treino_val, X_teste, Y_treino_val, Y_teste = train_test_split(X, Y, test_size=0.20, random_state=42)
