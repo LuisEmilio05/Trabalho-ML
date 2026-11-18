@@ -173,6 +173,3 @@ if __name__ == "__main__":
     disp.plot(cmap='Blues')
     plt.savefig('matriz_confusao.png', bbox_inches='tight')
     plt.close()
-
-
-
