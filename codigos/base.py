@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     # separar campos de entrada
     colunas_features = ['artist_count', 'released_year', 'released_month', 'released_day', 'in_spotify_playlists', 'in_spotify_charts', 'in_apple_playlists', 'in_apple_charts', 'in_deezer_playlists', 'in_deezer_charts', 'in_shazam_charts', 'bpm', 'danceability_%', 'valence_%', 'energy_%', 'acousticness_%', 'instrumentalness_%', 'liveness_%', 'speechiness_%']
-    one_hot = pd.get_dummies(df[['key', 'mode']], dtype=float)
+    one_hot = pd.get_dummies(df[['key', 'mode']], dtype=float, dummy_na=True)
     X_temp = pd.concat ([df[colunas_features], one_hot], axis=1)
     X = X_temp.values
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # divisao dos dados (60% - treino, 20% - validação e 20% - teste)
     X_treino_val, X_teste, Y_treino_val, Y_teste = train_test_split(X, Y, test_size=0.20, random_state=42)
 
-    X_treino, X_val, Y_treino, Y_val = train_test_split(X, Y, test_size=0.25, random_state=42)
+    X_treino, X_val, Y_treino, Y_val = train_test_split(X_treino_val, Y_treino_val, test_size=0.25, random_state=42)
 
 
     # Ridge & Lasso
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     y_m, y_s = Y_treino.mean(), Y_treino.std()
 
     X_treino_t = torch.tensor(X_treino_proc, dtype=torch.float32)
-    Y_treino_t = torch.tensor(Y_treino, dtype=torch.float32).unsqueeze(1)
+    Y_treino_t = torch.tensor((Y_treino - y_m) / y_s, dtype=torch.float32).unsqueeze(1)
     X_val_t = torch.tensor(X_val_proc, dtype=torch.float32)
     Y_val_t = torch.tensor((Y_val - y_m) / y_s, dtype=torch.float32).unsqueeze(1)
     X_teste_t = torch.tensor(X_teste_proc, dtype=torch.float32)
@@ -174,3 +174,4 @@ if __name__ == "__main__":
     disp.plot(cmap='Blues')
     plt.savefig('matriz_confusao.png', bbox_inches='tight')
     plt.close()
+
