@@ -10,7 +10,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import RidgeCV, LassoCV
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import f1_score, mean_absolute_error, mean_squared_error, r2_score, confusion_matrix, ConfusionMatrixDisplay
 
 if __name__ == "__main__":
     df = pd.read_csv('gym.csv')
@@ -51,11 +51,11 @@ if __name__ == "__main__":
 
             print(f"-{nome}")
             print(f"Melhor alpha: {modelo[-1].alpha_}")
-            print(f"RMSE: {rmse:.2f} | MAE: {mae:.2f} | R2: {r2:.2f}")
+            print(f"RMSE: {rmse:.4f} | MAE: {mae:.4f} | R2: {r2:.4f}")
 
             print("Colunas:")
             for feat, coef in zip(X_temp.columns, modelo[-1].coef_):
-                print(f"  {feat}: {coef:.2f}")
+                print(f"  {feat}: {coef:.4f}")
             print()
 
 #--------------------------------------------------------------
@@ -82,8 +82,8 @@ if __name__ == "__main__":
     # Treinamento
     num_features = X_treino_proc.shape[1]
     model = nn.Sequential(
-        nn.Linear(num_features, 64), 
-        nn.ReLU(), nn.Linear(64, 32), 
+        nn.Linear(num_features, 64),
+        nn.ReLU(), nn.Linear(64, 32),
         nn.ReLU(),nn.Linear(32, 1)
     )
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
         with torch.no_grad():
             loss_val = loss_func(model(X_val_t), Y_val_t).item()
         historico_val.append(loss_val)
-    
+
         if loss_val < melhor_val - 1e-4:
             melhor_val = loss_val
             sem_melhora = 0
@@ -157,6 +157,8 @@ if __name__ == "__main__":
     y_teste_classe = pd.cut(Y_teste, bins=bins, labels=nomes_classes)
     y_pred_classe = pd.cut(y_pred_mlp, bins=bins, labels=nomes_classes)
 
+    f1_mlp = f1_score(y_teste_classe, y_pred_classe, average='macro', zero_division=0)
+
     cm = confusion_matrix(y_teste_classe, y_pred_classe, labels=nomes_classes)
     df_cm = pd.DataFrame(
         cm,
@@ -166,7 +168,7 @@ if __name__ == "__main__":
 
     # prints
     print("- MLP (PyTorch)")
-    print(f"RMSE: {rmse_mlp:.2f} | MAE: {mae_mlp:.2f} | R2: {r2_mlp:.2f}")
+    print(f"RMSE: {rmse_mlp:.4f} | MAE: {mae_mlp:.4f} | R2: {r2_mlp:.4f} | F1: {f1_mlp:.4f}")
     print(df_cm)
 
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=nomes_classes)

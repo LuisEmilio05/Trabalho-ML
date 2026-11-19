@@ -23,9 +23,9 @@ trabalho-ML/
 ├── Codigos                 # pasta dos codigo
   ├── codigo.py             # codigo
   ├── func.py               # funcoes
-  ├── requirements.txt      # libs usadas
   └── metricas.py           # faz as metrica
-└── README.md               # Documentação do trabalho
+├── README.md               # Documentação do trabalho
+└── requirements.txt        # libs usadas
 ```
 
 ---
