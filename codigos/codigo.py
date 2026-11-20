@@ -11,7 +11,22 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import RidgeCV, LassoCV
 from sklearn.model_selection import train_test_split, KFold
-from sklearn.metrics import f1_score, mean_absolute_error, mean_squared_error, r2_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import f1_score, mean_absolute_error, mean_squared_error, r2_score, confusion_matrix, ConfusionMatrixDisplay, precision_recall_fscore_support, accuracy_score
+
+nomes_classes = ['Low', 'Medium', 'High']
+
+def metricas_classes(Y_real, y_pred, bins):
+    y_real_cls = pd.cut(Y_real, bins=bins, labels=nomes_classes)
+    y_pred_cls = pd.cut(y_pred, bins=bins, labels=nomes_classes)
+
+    prec, rec, f1, sup = precision_recall_fscore_support(
+        y_real_cls, y_pred_cls, labels=nomes_classes, zero_division=0
+    )
+    return {
+        'prec': prec, 'rec': rec, 'f1': f1, 'sup': sup,
+        'acc': accuracy_score(y_real_cls, y_pred_cls),
+        'f1_macro': f1.mean(),
+    }
 
 def treinar_mlp (X, Y, hidden=(64,32), lr=0.001, weight_decay=0.0, batch_size=32, epochs=200, paciencia=15, seed=42, verbose=False):
     torch.manual_seed(seed)
@@ -76,7 +91,7 @@ def treinar_mlp (X, Y, hidden=(64,32), lr=0.001, weight_decay=0.0, batch_size=32
             sem_melhora += 1
             if sem_melhora >= paciencia:
                 if verbose:
-                    print(f"Early stopping na época {epoch + 1}")
+                    print(f"Early stopping at epoch {epoch + 1}")
                 break
 
     model.load_state_dict(melhor_estado)
@@ -114,7 +129,6 @@ def cv_mlp (X, Y, kf, **params):
     
     return metricas
 
-
 if __name__ == "__main__":
     df = pd.read_csv('gym.csv')
 
@@ -133,6 +147,10 @@ if __name__ == "__main__":
     # divisao dos dados (80% - Cross Validation e 20% - teste)
     X_treino_val, X_teste, Y_treino_val, Y_teste = train_test_split(X, Y, test_size=0.20, random_state=42)
 
+
+    q = np.quantile(Y_treino_val, [1/3, 2/3])
+    bins = [-np.inf, q[0], q[1], np.inf]
+
 #--------------------------------------------------------------
 
     # Ridge e Lasso
@@ -143,28 +161,28 @@ if __name__ == "__main__":
     lasso = make_pipeline(SimpleImputer(strategy='median'), StandardScaler(), LassoCV(cv=5, random_state=42))
     lasso.fit(X_treino_val, Y_treino_val)
 
+    res_cls = {}
+
     # printa métricas e features
     for nome, modelo in [('Ridge', ridge), ('Lasso', lasso)]:
-            y_pred = modelo.predict(X_teste)
-            rmse = np.sqrt(mean_squared_error(Y_teste, y_pred))
-            mae = mean_absolute_error(Y_teste, y_pred)
-            r2 = r2_score(Y_teste, y_pred)
-
-            print(f"-{nome}")
-            print(f"Melhor alpha: {modelo[-1].alpha_}")
-            print(f"RMSE: {rmse:.4f} | MAE: {mae:.4f} | R2: {r2:.4f}")
-
-            print("Colunas:")
-            for feat, coef in zip(X_temp.columns, modelo[-1].coef_):
-                print(f"  {feat}: {coef:.4f}")
-            print()
+        y_pred = modelo.predict(X_teste)
+        rmse = np.sqrt(mean_squared_error(Y_teste, y_pred))
+        mae = mean_absolute_error(Y_teste, y_pred)
+        r2 = r2_score(Y_teste, y_pred)
+        print(f"-{nome}")
+        print(f"Best alpha: {modelo[-1].alpha_}")
+        print(f"RMSE: {rmse:.4f} | MAE: {mae:.4f} | R2: {r2:.4f}")
+        print("Features:")
+        for feat, coef in zip(X_temp.columns, modelo[-1].coef_):
+            print(f"  {feat}: {coef:.4f}")
+        print()
+        res_cls[nome] = metricas_classes(Y_teste, y_pred, bins)
 
 #--------------------------------------------------------------
 
     # MLP com Cross Validation
 
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
-    nomes_classes = ['Baixo', 'Médio', 'Alto']
 
     grade = {
         'hidden': [(32, 16), (64, 32), (128, 64)],
@@ -183,13 +201,11 @@ if __name__ == "__main__":
         print(f"{params} -> RMSE {rmse_medio:.4f} ± {rmse_std:.4f} | R2 {np.mean(m['r2']):.4f} | F1 {np.mean(m['f1']):.4f}")
     
     melhor_params = min(resultados, key=lambda r: r[1])[0]
-    print("\nMelhores hiperparâmetros:", melhor_params)
+    print("\nBest Hyperparameters:", melhor_params)
 
     model, preproce, y_media, y_desvio, historico_loss, historico_val = treinar_mlp(X_treino_val, Y_treino_val, **melhor_params, verbose=True)
     y_pred_mlp = prever_mlp(model, preproce, y_media, y_desvio, X_teste)
-
-    q = np.quantile(Y_treino_val, [1/3, 2/3])
-    bins = [-np.inf, q[0], q[1], np.inf]
+    res_cls['MLP'] = metricas_classes(Y_teste, y_pred_mlp, bins)
 
 
     # Curvas de perda (treino x validação)
@@ -200,7 +216,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.savefig('curva_loss.png', bbox_inches='tight')
     plt.close()
-
 
     rmse_mlp = np.sqrt(mean_squared_error(Y_teste, y_pred_mlp))
     mae_mlp = mean_absolute_error(Y_teste, y_pred_mlp)
